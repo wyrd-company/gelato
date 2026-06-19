@@ -1,0 +1,26 @@
+package cmd
+
+import (
+	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
+)
+
+func renameCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "rename REPOSITORY NEW_NAME",
+		Aliases:           []string{"mv", "move"},
+		Short:             "Rename an existing repository",
+		Args:              cobra.ExactArgs(2),
+		PersistentPreRunE: checkIfReadableAndCollab,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			be := backend.FromContext(ctx)
+			oldName := args[0]
+			newName := args[1]
+
+			return be.RenameRepository(ctx, oldName, newName)
+		},
+	}
+
+	return cmd
+}

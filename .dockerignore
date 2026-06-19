@@ -1,0 +1,11 @@
+.git
+.mnemonic
+data/
+.repos/
+.ssh/
+soft
+cmd/soft/soft
+completions/
+manpages/
+packages/*/dist/
+packages/*/node_modules/

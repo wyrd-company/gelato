@@ -1,0 +1,10 @@
+cmd/soft/soft
+./soft
+.ssh
+.repos
+dist
+node_modules/
+data/
+completions/
+manpages/
+soft_serve_ed25519*

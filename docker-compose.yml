@@ -1,0 +1,79 @@
+#
+# Demo-only stack. This compose file intentionally uses OpenBao dev mode,
+# a hardcoded root token, wildcard SSH certificate users, and plaintext HTTP
+# service URLs so the full Gelato/OpenBao/NATS flow can be tried locally.
+# Do not copy this posture into production.
+#
+services:
+  nats:
+    image: nats:2-alpine
+    command: ["-js"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  openbao:
+    image: openbao/openbao:latest
+    cap_add:
+      - IPC_LOCK
+    command: ["server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      BAO_ADDR: http://127.0.0.1:8200
+      BAO_TOKEN: root
+    ports:
+      - "8200:8200"
+
+  openbao-setup:
+    image: openbao/openbao:latest
+    depends_on:
+      - openbao
+    environment:
+      BAO_ADDR: http://openbao:8200
+      BAO_TOKEN: root
+    entrypoint:
+      - /bin/sh
+      - -ceu
+      - |
+        until bao status >/dev/null 2>&1; do sleep 1; done
+        bao secrets enable -path=ssh ssh >/dev/null 2>&1 || true
+        bao write ssh/config/ca generate_signing_key=true >/dev/null
+        bao write ssh/roles/gelato \
+          key_type=ca \
+          allow_user_certificates=true \
+          allowed_users='*' \
+          allowed_extensions='permit-pty' \
+          default_extensions='{"permit-pty":""}' \
+          ttl=1h >/dev/null
+
+  gelato:
+    build: .
+    depends_on:
+      openbao-setup:
+        condition: service_completed_successfully
+      nats:
+        condition: service_started
+    environment:
+      GELATO_DATA_PATH: /gelato
+      GELATO_NAME: Gelato
+      GELATO_SSH_LISTEN_ADDR: :23231
+      GELATO_SSH_PUBLIC_URL: ssh://localhost:23231
+      GELATO_HTTP_LISTEN_ADDR: :23232
+      GELATO_HTTP_PUBLIC_URL: http://localhost:23232
+      GELATO_STATS_LISTEN_ADDR: :23233
+      GELATO_OPENBAO_ENABLED: "true"
+      GELATO_OPENBAO_PUBLIC_KEY_URL: http://openbao:8200/v1/ssh/public_key
+      GELATO_OPENBAO_ALLOW_INSECURE_HTTP: "true"
+      GELATO_NATS_ENABLED: "true"
+      GELATO_NATS_URL: nats://nats:4222
+      GELATO_NATS_SUBJECT_PREFIX: gelato
+      GELATO_REMOTE_PUSH_ENABLED: "true"
+    ports:
+      - "23231:23231"
+      - "23232:23232"
+      - "23233:23233"
+      - "9418:9418"
+    volumes:
+      - gelato-data:/gelato
+
+volumes:
+  gelato-data:

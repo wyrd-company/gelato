@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/gelato-messages/package-lock.json
+
+      - run: go mod download
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
+          git lfs install --system
+      - run: go test ./...
+        env:
+          GELATO_OPENBAO_ENABLED: "false"
+          GELATO_NATS_ENABLED: "false"
+
+      - run: npm ci
+        working-directory: packages/gelato-messages
+
+      - run: npm test
+        working-directory: packages/gelato-messages
+
+      - run: docker build -t gelato:ci .
