@@ -150,13 +150,18 @@ func (d *Backend) ImportRepository(_ context.Context, name string, user proto.Us
 			CommandOptions: git.CommandOptions{
 				Timeout: -1,
 				Context: ctx,
-				Envs: []string{
-					fmt.Sprintf(`GIT_SSH_COMMAND=ssh -o UserKnownHostsFile="%s" -o StrictHostKeyChecking=no -i "%s"`,
-						filepath.Join(d.cfg.DataPath, "ssh", "known_hosts"),
-						d.cfg.SSH.ClientKeyPath,
-					),
-				},
 			},
+		}
+		knownHosts := filepath.Join(d.cfg.DataPath, "ssh", "known_hosts")
+		if err := os.MkdirAll(filepath.Dir(knownHosts), 0o700); err != nil {
+			d.logger.Error("failed to prepare known_hosts directory", "err", err, "path", knownHosts)
+			return err
+		}
+		copts.Envs = []string{
+			fmt.Sprintf(`GIT_SSH_COMMAND=ssh -o UserKnownHostsFile="%s" -o StrictHostKeyChecking=accept-new -i "%s"`,
+				knownHosts,
+				d.cfg.SSH.ClientKeyPath,
+			),
 		}
 
 		if err := git.Clone(remote, rp, copts); err != nil {

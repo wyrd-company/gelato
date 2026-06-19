@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -72,12 +73,17 @@ func (m mirrorPull) Func(ctx context.Context) func() {
 					}
 
 					var updateErr error
+					knownHosts := filepath.Join(cfg.DataPath, "ssh", "known_hosts")
+					if err := os.MkdirAll(filepath.Dir(knownHosts), 0o700); err != nil {
+						logger.Error("error preparing known_hosts directory", "repo", name, "err", err)
+						return
+					}
 					for _, c := range cmds {
 						args := strings.Split(c, " ")
 						cmd := git.NewCommand(args...).WithContext(ctx)
 						cmd.AddEnvs(
-							fmt.Sprintf(`GIT_SSH_COMMAND=ssh -o UserKnownHostsFile="%s" -o StrictHostKeyChecking=no -i "%s"`,
-								filepath.Join(cfg.DataPath, "ssh", "known_hosts"),
+							fmt.Sprintf(`GIT_SSH_COMMAND=ssh -o UserKnownHostsFile="%s" -o StrictHostKeyChecking=accept-new -i "%s"`,
+								knownHosts,
 								cfg.SSH.ClientKeyPath,
 							),
 						)

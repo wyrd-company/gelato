@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -78,8 +79,6 @@ func (d *Backend) Update(ctx context.Context, _ io.Writer, _ io.Writer, repo str
 		return
 	}
 
-	// TODO: run this async
-	// This would probably need something like an RPC server to communicate with the hook process.
 	if git.IsZeroHash(arg.OldSha) || git.IsZeroHash(arg.NewSha) {
 		wh, err := webhook.NewBranchTagEvent(ctx, user, r, arg.RefName, arg.OldSha, arg.NewSha)
 		if err != nil {
@@ -118,8 +117,8 @@ func (d *Backend) Update(ctx context.Context, _ io.Writer, _ io.Writer, repo str
 	}
 
 	if d.cfg.RemotePush.Enabled {
-		if err := d.pushUpdatedRef(ctx, r, arg); err != nil {
-			d.logger.Error("error pushing repository ref to remote", "repo", repo, "ref", arg.RefName, "err", err)
+		if err := d.startRemotePushWorker(r.Name(), arg); err != nil {
+			d.logger.Error("error starting remote push worker", "repo", repo, "ref", arg.RefName, "err", err)
 		}
 	}
 }
@@ -171,6 +170,33 @@ func populateLastModified(ctx context.Context, d *Backend, name string) error {
 	return rr.writeLastModified(c)
 }
 
+func (d *Backend) startRemotePushWorker(repo string, arg hooks.HookArg) error {
+	executable := os.Getenv("SOFT_SERVE_BIN_PATH")
+	if executable == "" {
+		var err error
+		executable, err = os.Executable()
+		if err != nil {
+			return err
+		}
+	}
+
+	cmd := exec.Command(executable, "hook", "remote-push", repo, arg.RefName, arg.OldSha, arg.NewSha)
+	cmd.Env = append(os.Environ(), d.cfg.Environ()...)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
+}
+
+// PushUpdatedRef pushes one updated ref to the repository's configured remote.
+func (d *Backend) PushUpdatedRef(ctx context.Context, repo string, arg hooks.HookArg) error {
+	r, err := d.Repository(ctx, repo)
+	if err != nil {
+		return err
+	}
+	return d.pushUpdatedRef(ctx, r, arg)
+}
+
 func (d *Backend) pushUpdatedRef(ctx context.Context, repo proto.Repository, arg hooks.HookArg) error {
 	r, err := repo.Open()
 	if err != nil {
@@ -187,20 +213,22 @@ func (d *Backend) pushUpdatedRef(ctx context.Context, repo proto.Repository, arg
 	}
 	remote := remotes[0]
 
-	args := []string{"push"}
-	if repo.IsMirror() {
-		args = append(args, "--mirror", remote)
-	} else {
-		refspec := arg.RefName + ":" + arg.RefName
-		if git.IsZeroHash(arg.NewSha) {
-			refspec = ":" + arg.RefName
-		}
-		args = append(args, remote, refspec)
+	refspec := arg.RefName + ":" + arg.RefName
+	if git.IsZeroHash(arg.NewSha) {
+		refspec = ":" + arg.RefName
+	} else if repo.IsMirror() {
+		refspec = "+" + refspec
+	}
+	args := []string{"push", remote, refspec}
+
+	knownHosts := filepath.Join(d.cfg.DataPath, "ssh", "known_hosts")
+	if err := os.MkdirAll(filepath.Dir(knownHosts), 0o700); err != nil {
+		return err
 	}
 
-	cmd := git.NewCommand(args...).WithContext(ctx)
-	cmd.AddEnvs(fmt.Sprintf(`GIT_SSH_COMMAND=ssh -o UserKnownHostsFile="%s" -o StrictHostKeyChecking=no -i "%s"`,
-		filepath.Join(d.cfg.DataPath, "ssh", "known_hosts"),
+	cmd := git.NewCommand(args...).WithContext(ctx).WithTimeout(d.cfg.RemotePush.Timeout)
+	cmd.AddEnvs(fmt.Sprintf(`GIT_SSH_COMMAND=ssh -o UserKnownHostsFile="%s" -o StrictHostKeyChecking=accept-new -i "%s"`,
+		knownHosts,
 		d.cfg.SSH.ClientKeyPath,
 	))
 	if _, err := cmd.RunInDir(r.Path); err != nil {

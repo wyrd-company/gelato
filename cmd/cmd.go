@@ -34,13 +34,13 @@ func InitBackendContext(cmd *cobra.Command, _ []string) error {
 	ctx = db.WithContext(ctx, dbx)
 	dbstore := database.New(ctx, dbx)
 	ctx = store.WithContext(ctx, dbstore)
-	be := backend.New(ctx, cfg, dbx, dbstore)
-	ctx = backend.WithContext(ctx, be)
 	publisher, err := events.NewNATSPublisher(cfg)
 	if err != nil {
 		return err
 	}
 	ctx = events.WithPublisher(ctx, publisher)
+	be := backend.New(ctx, cfg, dbx, dbstore)
+	ctx = backend.WithContext(ctx, be)
 
 	cmd.SetContext(ctx)
 

@@ -38,9 +38,9 @@ func NewIdentity(cert *ssh.Certificate) *Identity {
 func (i *Identity) ID() int64 {
 	// Negative IDs cannot accidentally match unowned repositories, whose
 	// owner ID is 0 in the upstream data model.
-	h := fnv.New32a()
+	h := fnv.New64a()
 	_, _ = h.Write([]byte(i.username))
-	return -int64(h.Sum32()) - 1
+	return -int64(h.Sum64()&((1<<63)-1)) - 1
 }
 
 func (i *Identity) Username() string {

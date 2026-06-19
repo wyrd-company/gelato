@@ -36,13 +36,17 @@ export interface SshSignature {
 }
 
 export interface AdminEnvelope {
+  /**
+   * UTF-8 JSON bytes for the concrete AdminRequest. The SSH signature covers
+   * exactly these bytes; the MessagePack envelope is only the transport wrapper.
+   */
   payload: Uint8Array;
   signature: SshSignature;
   certificate: string;
 }
 
 export interface AdminRequestBase {
-  requestId?: string;
+  requestId: string;
   action: AdminAction;
   target?: string;
   timestamp: string;
@@ -90,6 +94,12 @@ export type AdminRequest =
   | RepoBranchRequest
   | RepoTagRequest;
 
+export interface SignedEnvelopeInput {
+  request: AdminRequest;
+  signature: SshSignature;
+  certificate: string;
+}
+
 export interface AdminResponse<T = unknown> {
   requestId?: string;
   ok: boolean;
@@ -117,6 +127,18 @@ export interface RepositoryEvent {
 
 export function encodeAdminEnvelope(envelope: AdminEnvelope): Uint8Array {
   return encode(envelope);
+}
+
+export function adminPayloadBytes(request: AdminRequest): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(request));
+}
+
+export function buildSignedEnvelope(input: SignedEnvelopeInput): AdminEnvelope {
+  return {
+    payload: adminPayloadBytes(input.request),
+    signature: input.signature,
+    certificate: input.certificate,
+  };
 }
 
 export function decodeAdminEnvelope(data: Uint8Array): AdminEnvelope {

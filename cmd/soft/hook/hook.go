@@ -151,6 +151,26 @@ var (
 		Short: "Run git post-update hook",
 		RunE:  hooksRunE,
 	}
+
+	remotePushCmd = &cobra.Command{
+		Use:    "remote-push REPOSITORY REF OLD_SHA NEW_SHA",
+		Short:  "Push an updated ref to the configured remote",
+		Hidden: true,
+		Args:   cobra.ExactArgs(4),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			hks := backend.FromContext(ctx)
+			if err := hks.PushUpdatedRef(ctx, args[0], hooks.HookArg{
+				RefName: args[1],
+				OldSha:  args[2],
+				NewSha:  args[3],
+			}); err != nil {
+				log.FromContext(ctx).Error("failed to push repository ref to remote", "repo", args[0], "ref", args[1], "err", err)
+				return ErrInternalServerError
+			}
+			return nil
+		},
+	}
 )
 
 func init() {
@@ -160,6 +180,7 @@ func init() {
 		updateCmd,
 		postReceiveCmd,
 		postUpdateCmd,
+		remotePushCmd,
 	)
 }
 

@@ -31,7 +31,8 @@ Important settings:
 ```yaml
 openbao:
   enabled: true
-  public_key_url: "http://openbao:8200/v1/ssh/public_key"
+  public_key_url: "https://openbao.example/v1/ssh/public_key"
+  allow_insecure_http: false
   poll_interval: "1m"
   request_timeout: "5s"
 
@@ -44,9 +45,11 @@ nats:
 
 remote_push:
   enabled: true
+  timeout: "5m"
 ```
 
 When `openbao.enabled` is true, plain SSH public keys and keyboard-interactive login are rejected. SSH user certificates signed by the cached OpenBao CA are required.
+The OpenBao public key URL must use HTTPS unless `allow_insecure_http` is explicitly enabled for a local demo or trusted private network.
 
 ## Certificate Principals
 
@@ -102,16 +105,19 @@ Envelope:
 Gelato verifies that:
 
 1. the certificate is signed by the cached OpenBao CA
-2. the JSON payload timestamp is inside `nats.request_max_skew`
-3. the signature verifies against the certified public key
-4. the certificate principals include admin access
+2. the JSON payload includes a unique `requestId`
+3. the JSON payload timestamp is inside `nats.request_max_skew`
+4. the `requestId` has not already been used inside the skew window
+5. the signature verifies against the certified public key
+6. the certificate principals include admin access
 
-The signed JSON payload contains `action`, `timestamp`, and action-specific fields.
+The signed JSON payload contains `requestId`, `action`, `timestamp`, and action-specific fields. The signature covers exactly the UTF-8 bytes of that JSON payload; the outer NATS envelope is MessagePack.
 
 Create repository:
 
 ```json
 {
+  "requestId": "01JY5JH7P3J6B6G9S0M4J9FJ9V",
   "action": "repo.create",
   "timestamp": "2026-06-19T00:00:00Z",
   "repository": "platform/api",
@@ -127,6 +133,7 @@ Rename repository:
 
 ```json
 {
+  "requestId": "01JY5JHAP7CN7R71MZ21R2CH4A",
   "action": "repo.rename",
   "timestamp": "2026-06-19T00:00:00Z",
   "repository": "platform/api",
@@ -138,6 +145,7 @@ Branch operations:
 
 ```json
 {
+  "requestId": "01JY5JHC9VDB70AFRDVKTTJQ36",
   "action": "repo.branch",
   "timestamp": "2026-06-19T00:00:00Z",
   "repository": "platform/api",
@@ -153,6 +161,7 @@ Tag operations:
 
 ```json
 {
+  "requestId": "01JY5JHF0YA0FHMD3NVTBWN2BG",
   "action": "repo.tag",
   "timestamp": "2026-06-19T00:00:00Z",
   "repository": "platform/api",

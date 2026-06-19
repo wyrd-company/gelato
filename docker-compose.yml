@@ -1,3 +1,9 @@
+#
+# Demo-only stack. This compose file intentionally uses OpenBao dev mode,
+# a hardcoded root token, wildcard SSH certificate users, and plaintext HTTP
+# service URLs so the full Gelato/OpenBao/NATS flow can be tried locally.
+# Do not copy this posture into production.
+#
 services:
   nats:
     image: nats:2-alpine
@@ -56,6 +62,7 @@ services:
       GELATO_STATS_LISTEN_ADDR: :23233
       GELATO_OPENBAO_ENABLED: "true"
       GELATO_OPENBAO_PUBLIC_KEY_URL: http://openbao:8200/v1/ssh/public_key
+      GELATO_OPENBAO_ALLOW_INSECURE_HTTP: "true"
       GELATO_NATS_ENABLED: "true"
       GELATO_NATS_URL: nats://nats:4222
       GELATO_NATS_SUBJECT_PREFIX: gelato

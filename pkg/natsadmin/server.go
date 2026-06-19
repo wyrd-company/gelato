@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"charm.land/log/v2"
@@ -30,6 +31,8 @@ type Server struct {
 	sub    *nats.Subscription
 	logger *log.Logger
 	ctx    context.Context
+	seenMu sync.Mutex
+	seen   map[string]time.Time
 }
 
 func New(ctx context.Context) (*Server, error) {
@@ -50,6 +53,7 @@ func New(ctx context.Context) (*Server, error) {
 		conn:   conn,
 		logger: log.FromContext(ctx).WithPrefix("nats.admin"),
 		ctx:    ctx,
+		seen:   make(map[string]time.Time),
 	}, nil
 }
 
@@ -153,6 +157,9 @@ func (s *Server) verify(msg *nats.Msg) (string, messages.AdminRequestBase, *cert
 	if base.Action == "" {
 		return base.RequestID, base, nil, errors.New("payload action is required")
 	}
+	if base.RequestID == "" {
+		return base.RequestID, base, nil, errors.New("payload requestId is required")
+	}
 	if base.Timestamp.IsZero() {
 		return base.RequestID, base, nil, errors.New("payload timestamp is required")
 	}
@@ -176,8 +183,34 @@ func (s *Server) verify(msg *nats.Msg) (string, messages.AdminRequestBase, *cert
 	if err := identity.Certificate().Key.Verify(envelope.Payload, signature); err != nil {
 		return base.RequestID, base, nil, fmt.Errorf("verify payload signature: %w", err)
 	}
+	if err := s.rememberRequestID(base.RequestID); err != nil {
+		return base.RequestID, base, nil, err
+	}
 
 	return base.RequestID, base, identity, nil
+}
+
+func (s *Server) rememberRequestID(requestID string) error {
+	now := time.Now()
+	ttl := s.cfg.NATS.RequestMaxSkew
+	expiresAt := now.Add(ttl)
+
+	s.seenMu.Lock()
+	defer s.seenMu.Unlock()
+
+	for id, expiry := range s.seen {
+		if !expiry.After(now) {
+			delete(s.seen, id)
+		}
+	}
+	if s.seen == nil {
+		s.seen = make(map[string]time.Time)
+	}
+	if expiry, ok := s.seen[requestID]; ok && expiry.After(now) {
+		return fmt.Errorf("duplicate requestId %q", requestID)
+	}
+	s.seen[requestID] = expiresAt
+	return nil
 }
 
 func (s *Server) repoCreate(ctx context.Context, data []byte) (interface{}, error) {

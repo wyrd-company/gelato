@@ -150,6 +150,9 @@ openbao:
   enabled: {{ .OpenBao.Enabled }}
   # Full URL to the OpenBao SSH CA public key endpoint.
   public_key_url: "{{ .OpenBao.PublicKeyURL }}"
+  # Permit plaintext HTTP for the OpenBao CA endpoint. Use only for demos or
+  # trusted private networks.
+  allow_insecure_http: {{ .OpenBao.AllowInsecureHTTP }}
   # How frequently Gelato refreshes the trusted CA public key.
   poll_interval: "{{ .OpenBao.PollInterval }}"
   # HTTP timeout for polling OpenBao.
@@ -167,6 +170,8 @@ nats:
 remote_push:
   # Push changed refs back to imported repository remotes from the update hook.
   enabled: {{ .RemotePush.Enabled }}
+  # Maximum duration for each remote push worker.
+  timeout: "{{ .RemotePush.Timeout }}"
 
 # Additional admin keys.
 #initial_admin_keys:

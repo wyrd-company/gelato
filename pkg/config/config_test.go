@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/matryer/is"
 )
@@ -123,4 +124,44 @@ func TestParseMultipleMethods(t *testing.T) {
 		"POST",
 		"PUT",
 	})
+}
+
+func TestOpenBaoRequiresHTTPSByDefault(t *testing.T) {
+	is := is.New(t)
+	cfg := DefaultConfig()
+	cfg.DataPath = t.TempDir()
+	cfg.OpenBao.Enabled = true
+	cfg.OpenBao.PublicKeyURL = "http://openbao:8200/v1/ssh/public_key"
+
+	is.True(cfg.Validate() != nil)
+
+	cfg.OpenBao.AllowInsecureHTTP = true
+	is.NoErr(cfg.Validate())
+}
+
+func TestOpenBaoRequiresPublicKeyURLWhenEnabled(t *testing.T) {
+	is := is.New(t)
+	cfg := DefaultConfig()
+	cfg.DataPath = t.TempDir()
+	cfg.OpenBao.Enabled = true
+	cfg.OpenBao.PublicKeyURL = ""
+
+	is.True(cfg.Validate() != nil)
+}
+
+func TestEnabledNATSAndRemotePushRequirePositiveDurations(t *testing.T) {
+	is := is.New(t)
+	cfg := DefaultConfig()
+	cfg.DataPath = t.TempDir()
+	cfg.NATS.Enabled = true
+	cfg.NATS.RequestMaxSkew = 0
+	is.True(cfg.Validate() != nil)
+
+	cfg.NATS.RequestMaxSkew = time.Minute
+	cfg.RemotePush.Enabled = true
+	cfg.RemotePush.Timeout = 0
+	is.True(cfg.Validate() != nil)
+
+	cfg.RemotePush.Timeout = time.Minute
+	is.NoErr(cfg.Validate())
 }

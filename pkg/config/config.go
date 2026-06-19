@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -147,6 +148,10 @@ type OpenBaoConfig struct {
 	// PublicKeyURL is the full URL for the OpenBao SSH CA public key endpoint.
 	PublicKeyURL string `env:"PUBLIC_KEY_URL" yaml:"public_key_url"`
 
+	// AllowInsecureHTTP permits polling a plaintext OpenBao CA endpoint.
+	// This is only intended for local demos or trusted private networks.
+	AllowInsecureHTTP bool `env:"ALLOW_INSECURE_HTTP" yaml:"allow_insecure_http"`
+
 	// PollInterval is how frequently the public CA key endpoint is refreshed.
 	PollInterval time.Duration `env:"POLL_INTERVAL" yaml:"poll_interval"`
 
@@ -176,6 +181,9 @@ type NATSConfig struct {
 type RemotePushConfig struct {
 	// Enabled pushes ref updates back to a configured remote from the update hook.
 	Enabled bool `env:"ENABLED" yaml:"enabled"`
+
+	// Timeout limits each remote push worker.
+	Timeout time.Duration `env:"TIMEOUT" yaml:"timeout"`
 }
 
 // Config is the configuration for Gelato.
@@ -270,6 +278,7 @@ func (c *Config) Environ() []string {
 		fmt.Sprintf("SOFT_SERVE_JOBS_MIRROR_PULL=%s", c.Jobs.MirrorPull),
 		fmt.Sprintf("SOFT_SERVE_OPENBAO_ENABLED=%t", c.OpenBao.Enabled),
 		fmt.Sprintf("SOFT_SERVE_OPENBAO_PUBLIC_KEY_URL=%s", c.OpenBao.PublicKeyURL),
+		fmt.Sprintf("SOFT_SERVE_OPENBAO_ALLOW_INSECURE_HTTP=%t", c.OpenBao.AllowInsecureHTTP),
 		fmt.Sprintf("SOFT_SERVE_OPENBAO_POLL_INTERVAL=%s", c.OpenBao.PollInterval),
 		fmt.Sprintf("SOFT_SERVE_OPENBAO_REQUEST_TIMEOUT=%s", c.OpenBao.RequestTimeout),
 		fmt.Sprintf("SOFT_SERVE_NATS_ENABLED=%t", c.NATS.Enabled),
@@ -278,6 +287,7 @@ func (c *Config) Environ() []string {
 		fmt.Sprintf("SOFT_SERVE_NATS_ADMIN_QUEUE=%s", c.NATS.AdminQueue),
 		fmt.Sprintf("SOFT_SERVE_NATS_REQUEST_MAX_SKEW=%s", c.NATS.RequestMaxSkew),
 		fmt.Sprintf("SOFT_SERVE_REMOTE_PUSH_ENABLED=%t", c.RemotePush.Enabled),
+		fmt.Sprintf("SOFT_SERVE_REMOTE_PUSH_TIMEOUT=%s", c.RemotePush.Timeout),
 	}...)
 
 	return envs
@@ -475,6 +485,7 @@ func DefaultConfig() *Config {
 		},
 		RemotePush: RemotePushConfig{
 			Enabled: false,
+			Timeout: 5 * time.Minute,
 		},
 	}
 }
@@ -512,6 +523,32 @@ func (c *Config) Validate() error {
 
 	if strings.HasPrefix(c.DB.Driver, "sqlite") && !filepath.IsAbs(c.DB.DataSource) {
 		c.DB.DataSource = filepath.Join(c.DataPath, c.DB.DataSource)
+	}
+
+	c.OpenBao.PublicKeyURL = strings.TrimSpace(c.OpenBao.PublicKeyURL)
+	if c.OpenBao.Enabled {
+		if c.OpenBao.PublicKeyURL == "" {
+			return fmt.Errorf("openbao public_key_url is required when openbao is enabled")
+		}
+		u, err := url.Parse(c.OpenBao.PublicKeyURL)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			return fmt.Errorf("openbao public_key_url must be an absolute URL")
+		}
+		switch u.Scheme {
+		case "https":
+		case "http":
+			if !c.OpenBao.AllowInsecureHTTP {
+				return fmt.Errorf("openbao public_key_url must use https unless allow_insecure_http is true")
+			}
+		default:
+			return fmt.Errorf("openbao public_key_url must use https")
+		}
+	}
+	if c.NATS.Enabled && c.NATS.RequestMaxSkew <= 0 {
+		return fmt.Errorf("nats request_max_skew must be greater than zero")
+	}
+	if c.RemotePush.Enabled && c.RemotePush.Timeout <= 0 {
+		return fmt.Errorf("remote_push timeout must be greater than zero")
 	}
 
 	// Validate keys
