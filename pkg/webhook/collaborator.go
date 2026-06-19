@@ -3,10 +3,10 @@ package webhook
 import (
 	"context"
 
-	"github.com/charmbracelet/soft-serve/pkg/access"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/store"
+	"github.com/wyrd-company/gelato/pkg/access"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/store"
 )
 
 // CollaboratorEvent is a collaborator event.

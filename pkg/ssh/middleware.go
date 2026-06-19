@@ -7,17 +7,19 @@ import (
 
 	"charm.land/log/v2"
 	"charm.land/wish/v2"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/ssh/cmd"
-	"github.com/charmbracelet/soft-serve/pkg/sshutils"
-	"github.com/charmbracelet/soft-serve/pkg/store"
 	"github.com/charmbracelet/ssh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/certauth"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/events"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/ssh/cmd"
+	"github.com/wyrd-company/gelato/pkg/sshutils"
+	"github.com/wyrd-company/gelato/pkg/store"
 	gossh "golang.org/x/crypto/ssh"
 )
 
@@ -55,6 +57,22 @@ func AuthenticationMiddleware(sh ssh.Handler) ssh.Handler {
 			return
 		}
 
+		if cache := certauth.AuthorityCacheFromContext(ctx); cache != nil && cache.Enabled() {
+			if pk == nil {
+				wish.Fatalln(s, ErrPermissionDenied)
+				return
+			}
+
+			user, err := cache.VerifyPublicKey(pk)
+			if err != nil {
+				wish.Fatalln(s, ErrPermissionDenied)
+				return
+			}
+			ctx.SetValue(proto.ContextKeyUser, user)
+			sh(s)
+			return
+		}
+
 		ac := be.AllowKeyless(ctx)
 		publicKeyCounter.WithLabelValues(strconv.FormatBool(ac || pk != nil)).Inc()
 		if !ac && pk == nil {
@@ -74,7 +92,31 @@ func AuthenticationMiddleware(sh ssh.Handler) ssh.Handler {
 }
 
 // ContextMiddleware adds the config, backend, and logger to the session context.
-func ContextMiddleware(cfg *config.Config, dbx *db.DB, datastore store.Store, be *backend.Backend, logger *log.Logger) func(ssh.Handler) ssh.Handler {
+type contextMiddlewareOptions struct {
+	cache     *certauth.AuthorityCache
+	publisher events.Publisher
+}
+
+type ContextMiddlewareOption func(*contextMiddlewareOptions)
+
+func WithAuthorityCache(cache *certauth.AuthorityCache) ContextMiddlewareOption {
+	return func(opts *contextMiddlewareOptions) {
+		opts.cache = cache
+	}
+}
+
+func WithEventPublisher(publisher events.Publisher) ContextMiddlewareOption {
+	return func(opts *contextMiddlewareOptions) {
+		opts.publisher = publisher
+	}
+}
+
+func ContextMiddleware(cfg *config.Config, dbx *db.DB, datastore store.Store, be *backend.Backend, logger *log.Logger, opts ...ContextMiddlewareOption) func(ssh.Handler) ssh.Handler {
+	var options contextMiddlewareOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	return func(sh ssh.Handler) ssh.Handler {
 		return func(s ssh.Session) {
 			ctx := s.Context()
@@ -84,6 +126,12 @@ func ContextMiddleware(cfg *config.Config, dbx *db.DB, datastore store.Store, be
 			ctx.SetValue(store.ContextKey, datastore)
 			ctx.SetValue(backend.ContextKey, be)
 			ctx.SetValue(log.ContextKey, logger.WithPrefix("ssh"))
+			if options.cache != nil {
+				ctx.SetValue(certauth.ContextKey(), options.cache)
+			}
+			if options.publisher != nil {
+				ctx.SetValue(events.ContextKey(), options.publisher)
+			}
 			sh(s)
 		}
 	}
@@ -112,7 +160,7 @@ func CommandMiddleware(sh ssh.Handler) ssh.Handler {
 		args := s.Command()
 		cliCommandCounter.WithLabelValues(cmd.CommandName(args)).Inc()
 		rootCmd := &cobra.Command{
-			Short:        "Soft Serve is a self-hostable Git server for the command line.",
+			Short:        "Gelato is a self-hostable Git server for the command line.",
 			SilenceUsage: true,
 		}
 		rootCmd.CompletionOptions.DisableDefaultCmd = true
@@ -125,13 +173,17 @@ func CommandMiddleware(sh ssh.Handler) ssh.Handler {
 			cmd.GitReceivePackCommand(),
 			cmd.RepoCommand(),
 			cmd.SettingsCommand(),
-			cmd.UserCommand(),
 			cmd.InfoCommand(),
-			cmd.PubkeyCommand(),
-			cmd.SetUsernameCommand(),
-			cmd.JWTCommand(),
-			cmd.TokenCommand(),
 		)
+		if !cfg.OpenBao.Enabled {
+			rootCmd.AddCommand(
+				cmd.UserCommand(),
+				cmd.PubkeyCommand(),
+				cmd.SetUsernameCommand(),
+				cmd.JWTCommand(),
+				cmd.TokenCommand(),
+			)
+		}
 
 		if cfg.LFS.Enabled {
 			rootCmd.AddCommand(

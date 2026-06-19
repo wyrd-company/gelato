@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/charmbracelet/soft-serve/pkg/utils"
 	"github.com/muesli/reflow/truncate"
+	"github.com/wyrd-company/gelato/pkg/utils"
 )
 
 // TruncateString is a convenient wrapper around truncate.TruncateString.

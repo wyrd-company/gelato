@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-var configFileTmpl = template.Must(template.New("config").Parse(`# Soft Serve Server configurations
+var configFileTmpl = template.Must(template.New("config").Parse(`# Gelato server configuration
 
 # The name of the server.
 # This is the name that will be displayed in the UI.
@@ -143,6 +143,30 @@ lfs:
 # Cron job configuration
 jobs:
   mirror_pull: "{{ .Jobs.MirrorPull }}"
+
+# OpenBao SSH CA trust configuration.
+openbao:
+  # Require OpenBao-signed SSH user certificates for SSH and NATS admin auth.
+  enabled: {{ .OpenBao.Enabled }}
+  # Full URL to the OpenBao SSH CA public key endpoint.
+  public_key_url: "{{ .OpenBao.PublicKeyURL }}"
+  # How frequently Gelato refreshes the trusted CA public key.
+  poll_interval: "{{ .OpenBao.PollInterval }}"
+  # HTTP timeout for polling OpenBao.
+  request_timeout: "{{ .OpenBao.RequestTimeout }}"
+
+# NATS admin and event configuration.
+nats:
+  enabled: {{ .NATS.Enabled }}
+  url: "{{ .NATS.URL }}"
+  subject_prefix: "{{ .NATS.SubjectPrefix }}"
+  admin_queue: "{{ .NATS.AdminQueue }}"
+  request_max_skew: "{{ .NATS.RequestMaxSkew }}"
+
+# Remote push-on-update configuration.
+remote_push:
+  # Push changed refs back to imported repository remotes from the update hook.
+  enabled: {{ .RemotePush.Enabled }}
 
 # Additional admin keys.
 #initial_admin_keys:

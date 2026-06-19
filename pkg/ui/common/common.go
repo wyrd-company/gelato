@@ -6,13 +6,13 @@ import (
 
 	"charm.land/log/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/ui/keymap"
-	"github.com/charmbracelet/soft-serve/pkg/ui/styles"
 	"github.com/charmbracelet/ssh"
 	zone "github.com/lrstanley/bubblezone/v2"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/ui/keymap"
+	"github.com/wyrd-company/gelato/pkg/ui/styles"
 )
 
 type contextKey struct {
@@ -73,7 +73,7 @@ func (c *Common) Config() *config.Config {
 	return config.FromContext(c.ctx)
 }
 
-// Backend returns the Soft Serve backend.
+// Backend returns the Gelato backend.
 func (c *Common) Backend() *backend.Backend {
 	return backend.FromContext(c.ctx)
 }

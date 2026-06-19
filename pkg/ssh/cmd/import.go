@@ -3,10 +3,10 @@ package cmd
 import (
 	"errors"
 
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/task"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/task"
 )
 
 // importCommand is the command for creating a new repository.

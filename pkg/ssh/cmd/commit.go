@@ -6,12 +6,12 @@ import (
 	"time"
 
 	gansi "charm.land/glamour/v2/ansi"
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
-	"github.com/charmbracelet/soft-serve/pkg/ui/styles"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
+	"github.com/wyrd-company/gelato/pkg/ui/styles"
+	"github.com/wyrd-company/gelato/pkg/utils"
 )
 
 // commitCommand returns a command that prints the contents of a commit.

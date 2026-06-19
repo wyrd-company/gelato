@@ -13,16 +13,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
-	"github.com/charmbracelet/soft-serve/pkg/hooks"
-	"github.com/charmbracelet/soft-serve/pkg/lfs"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/storage"
-	"github.com/charmbracelet/soft-serve/pkg/task"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
-	"github.com/charmbracelet/soft-serve/pkg/webhook"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/models"
+	"github.com/wyrd-company/gelato/pkg/events"
+	"github.com/wyrd-company/gelato/pkg/hooks"
+	"github.com/wyrd-company/gelato/pkg/lfs"
+	"github.com/wyrd-company/gelato/pkg/messages"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/storage"
+	"github.com/wyrd-company/gelato/pkg/task"
+	"github.com/wyrd-company/gelato/pkg/utils"
+	"github.com/wyrd-company/gelato/pkg/webhook"
 )
 
 func validateImportRemote(remote string) error {
@@ -94,7 +96,21 @@ func (d *Backend) CreateRepository(ctx context.Context, name string, user proto.
 		return nil, err
 	}
 
-	return d.Repository(ctx, name)
+	r, err := d.Repository(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	source, _ := events.RepositorySourceFromContext(ctx)
+	d.publishRepositoryEvent(ctx, messages.RepositoryEvent{
+		Type:        messages.EventRepositoryAdded,
+		Repository:  r.Name(),
+		ProjectName: r.ProjectName(),
+		Remote:      source.Remote,
+		Mirror:      opts.Mirror || source.Mirror,
+	})
+
+	return r, nil
 }
 
 // ImportRepository imports a repository from remote.
@@ -153,6 +169,7 @@ func (d *Backend) ImportRepository(_ context.Context, name string, user proto.Us
 			return err
 		}
 
+		ctx = events.WithRepositorySource(ctx, events.RepositorySource{Remote: remote, Mirror: opts.Mirror})
 		r, err := d.CreateRepository(ctx, name, user, opts)
 		if err != nil {
 			d.logger.Error("failed to create repository", "err", err, "name", name)
@@ -377,7 +394,18 @@ func (d *Backend) RenameRepository(ctx context.Context, oldName string, newName 
 		return err
 	}
 
-	return webhook.SendEvent(ctx, wh)
+	if err := webhook.SendEvent(ctx, wh); err != nil {
+		return err
+	}
+
+	d.publishRepositoryEvent(ctx, messages.RepositoryEvent{
+		Type:       messages.EventRepositoryRenamed,
+		Repository: newName,
+		OldName:    oldName,
+		NewName:    newName,
+	})
+
+	return nil
 }
 
 // Repositories returns a list of repositories per page.

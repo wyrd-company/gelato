@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/charmbracelet/soft-serve/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/config"
 )
 
 func TestBadNewPair(t *testing.T) {

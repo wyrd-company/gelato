@@ -5,12 +5,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/charmbracelet/soft-serve/pkg/access"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
-	"github.com/charmbracelet/soft-serve/pkg/webhook"
+	"github.com/wyrd-company/gelato/pkg/access"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/models"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/utils"
+	"github.com/wyrd-company/gelato/pkg/webhook"
 )
 
 // AddCollaborator adds a collaborator to a repository.

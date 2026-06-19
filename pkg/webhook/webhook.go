@@ -12,16 +12,16 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/ssrf"
-	"github.com/charmbracelet/soft-serve/pkg/store"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
-	"github.com/charmbracelet/soft-serve/pkg/version"
 	"github.com/google/go-querystring/query"
 	"github.com/google/uuid"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/models"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/ssrf"
+	"github.com/wyrd-company/gelato/pkg/store"
+	"github.com/wyrd-company/gelato/pkg/utils"
+	"github.com/wyrd-company/gelato/pkg/version"
 )
 
 // Hook is a repository webhook.

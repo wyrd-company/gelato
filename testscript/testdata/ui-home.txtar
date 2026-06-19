@@ -50,4 +50,3 @@ grep 'Test Soft Serve' about2.txt
 # stop the server
 [windows] stopserver
 [windows] ! stderr .
-

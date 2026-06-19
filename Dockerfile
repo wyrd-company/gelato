@@ -1,29 +1,29 @@
-FROM alpine:latest
+FROM golang:1.25-alpine AS build
 
-# Create directories
-WORKDIR /soft-serve
-# Expose data volume
-VOLUME /soft-serve
+RUN apk add --no-cache git
+WORKDIR /src
 
-# Environment variables
-ENV SOFT_SERVE_DATA_PATH "/soft-serve"
-ENV SOFT_SERVE_INITIAL_ADMIN_KEYS ""
-# workaround to prevent slowness in docker when running with a tty
-ENV CI "1"
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Expose ports
-# SSH
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/gelato ./cmd/soft
+
+FROM alpine:3.22
+
+RUN apk add --no-cache bash git openssh
+
+WORKDIR /gelato
+VOLUME /gelato
+
+ENV GELATO_DATA_PATH=/gelato
+ENV CI=1
+
 EXPOSE 23231/tcp
-# HTTP
 EXPOSE 23232/tcp
-# Stats
 EXPOSE 23233/tcp
-# Git
 EXPOSE 9418/tcp
 
-# Set the default command
-ENTRYPOINT [ "/usr/local/bin/soft", "serve" ]
+COPY --from=build /out/gelato /usr/local/bin/gelato
 
-RUN apk update && apk add --update git bash openssh && rm -rf /var/cache/apk/*
-
-COPY soft /usr/local/bin/soft
+ENTRYPOINT ["/usr/local/bin/gelato", "serve"]

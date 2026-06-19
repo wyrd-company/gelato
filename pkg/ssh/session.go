@@ -6,14 +6,14 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/wish/v2"
 	bm "charm.land/wish/v2/bubbletea"
-	"github.com/charmbracelet/soft-serve/pkg/access"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
 	"github.com/charmbracelet/ssh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/wyrd-company/gelato/pkg/access"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
 )
 
 var tuiSessionCounter = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -30,7 +30,7 @@ var tuiSessionDuration = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help:      "The total time spent in TUI sessions",
 }, []string{"repo", "term"})
 
-// SessionHandler is the soft-serve bubbletea ssh session handler.
+// SessionHandler is the Gelato Bubble Tea SSH session handler.
 // This middleware must be run after the ContextMiddleware.
 func SessionHandler(s ssh.Session) *tea.Program {
 	pty, _, active := s.Pty()

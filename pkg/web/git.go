@@ -15,17 +15,17 @@ import (
 	"time"
 
 	"charm.land/log/v2"
-	gitb "github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/access"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/git"
-	"github.com/charmbracelet/soft-serve/pkg/lfs"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	gitb "github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/access"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/git"
+	"github.com/wyrd-company/gelato/pkg/lfs"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/utils"
 )
 
 // GitRoute is a route for git services.

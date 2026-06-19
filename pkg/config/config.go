@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/charmbracelet/soft-serve/pkg/sshutils"
+	"github.com/wyrd-company/gelato/pkg/sshutils"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
 )
 
-var binPath = "soft"
+var binPath = "gelato"
 
 // SSHConfig is the configuration for the SSH server.
 type SSHConfig struct {
@@ -139,7 +139,46 @@ type JobsConfig struct {
 	MirrorPull string `env:"MIRROR_PULL" yaml:"mirror_pull"`
 }
 
-// Config is the configuration for Soft Serve.
+// OpenBaoConfig configures OpenBao SSH CA trust.
+type OpenBaoConfig struct {
+	// Enabled requires OpenBao-signed SSH certificates for SSH and NATS admin authentication.
+	Enabled bool `env:"ENABLED" yaml:"enabled"`
+
+	// PublicKeyURL is the full URL for the OpenBao SSH CA public key endpoint.
+	PublicKeyURL string `env:"PUBLIC_KEY_URL" yaml:"public_key_url"`
+
+	// PollInterval is how frequently the public CA key endpoint is refreshed.
+	PollInterval time.Duration `env:"POLL_INTERVAL" yaml:"poll_interval"`
+
+	// RequestTimeout is the timeout used while polling OpenBao.
+	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" yaml:"request_timeout"`
+}
+
+// NATSConfig configures the NATS admin interface and event publishing.
+type NATSConfig struct {
+	// Enabled toggles the NATS integration on/off.
+	Enabled bool `env:"ENABLED" yaml:"enabled"`
+
+	// URL is the NATS server URL.
+	URL string `env:"URL" yaml:"url"`
+
+	// SubjectPrefix is the root subject prefix for Gelato messages.
+	SubjectPrefix string `env:"SUBJECT_PREFIX" yaml:"subject_prefix"`
+
+	// AdminQueue is the queue group used by admin subscribers.
+	AdminQueue string `env:"ADMIN_QUEUE" yaml:"admin_queue"`
+
+	// RequestMaxSkew is the maximum allowed admin request timestamp skew.
+	RequestMaxSkew time.Duration `env:"REQUEST_MAX_SKEW" yaml:"request_max_skew"`
+}
+
+// RemotePushConfig configures automatic pushes back to imported repository remotes.
+type RemotePushConfig struct {
+	// Enabled pushes ref updates back to a configured remote from the update hook.
+	Enabled bool `env:"ENABLED" yaml:"enabled"`
+}
+
+// Config is the configuration for Gelato.
 type Config struct {
 	// Name is the name of the server.
 	Name string `env:"NAME" yaml:"name"`
@@ -168,10 +207,19 @@ type Config struct {
 	// Jobs is the configuration for cron jobs
 	Jobs JobsConfig `envPrefix:"JOBS_" yaml:"jobs"`
 
+	// OpenBao configures SSH certificate trust.
+	OpenBao OpenBaoConfig `envPrefix:"OPENBAO_" yaml:"openbao"`
+
+	// NATS configures admin requests and event publishing.
+	NATS NATSConfig `envPrefix:"NATS_" yaml:"nats"`
+
+	// RemotePush configures push-on-update behavior for imported repositories.
+	RemotePush RemotePushConfig `envPrefix:"REMOTE_PUSH_" yaml:"remote_push"`
+
 	// InitialAdminKeys is a list of public keys that will be added to the list of admins.
 	InitialAdminKeys []string `env:"INITIAL_ADMIN_KEYS" envSeparator:"\n" yaml:"initial_admin_keys"`
 
-	// DataPath is the path to the directory where Soft Serve will store its data.
+	// DataPath is the path to the directory where Gelato will store its data.
 	DataPath string `env:"DATA_PATH" yaml:"-"`
 }
 
@@ -220,6 +268,16 @@ func (c *Config) Environ() []string {
 		fmt.Sprintf("SOFT_SERVE_LFS_ENABLED=%t", c.LFS.Enabled),
 		fmt.Sprintf("SOFT_SERVE_LFS_SSH_ENABLED=%t", c.LFS.SSHEnabled),
 		fmt.Sprintf("SOFT_SERVE_JOBS_MIRROR_PULL=%s", c.Jobs.MirrorPull),
+		fmt.Sprintf("SOFT_SERVE_OPENBAO_ENABLED=%t", c.OpenBao.Enabled),
+		fmt.Sprintf("SOFT_SERVE_OPENBAO_PUBLIC_KEY_URL=%s", c.OpenBao.PublicKeyURL),
+		fmt.Sprintf("SOFT_SERVE_OPENBAO_POLL_INTERVAL=%s", c.OpenBao.PollInterval),
+		fmt.Sprintf("SOFT_SERVE_OPENBAO_REQUEST_TIMEOUT=%s", c.OpenBao.RequestTimeout),
+		fmt.Sprintf("SOFT_SERVE_NATS_ENABLED=%t", c.NATS.Enabled),
+		fmt.Sprintf("SOFT_SERVE_NATS_URL=%s", c.NATS.URL),
+		fmt.Sprintf("SOFT_SERVE_NATS_SUBJECT_PREFIX=%s", c.NATS.SubjectPrefix),
+		fmt.Sprintf("SOFT_SERVE_NATS_ADMIN_QUEUE=%s", c.NATS.AdminQueue),
+		fmt.Sprintf("SOFT_SERVE_NATS_REQUEST_MAX_SKEW=%s", c.NATS.RequestMaxSkew),
+		fmt.Sprintf("SOFT_SERVE_REMOTE_PUSH_ENABLED=%t", c.RemotePush.Enabled),
 	}...)
 
 	return envs
@@ -227,14 +285,14 @@ func (c *Config) Environ() []string {
 
 // IsDebug returns true if the server is running in debug mode.
 func IsDebug() bool {
-	debug, _ := strconv.ParseBool(os.Getenv("SOFT_SERVE_DEBUG"))
+	debug, _ := strconv.ParseBool(firstEnv("GELATO_DEBUG", "SOFT_SERVE_DEBUG"))
 	return debug
 }
 
 // IsVerbose returns true if the server is running in verbose mode.
 // Verbose mode is only enabled if debug mode is enabled.
 func IsVerbose() bool {
-	verbose, _ := strconv.ParseBool(os.Getenv("SOFT_SERVE_VERBOSE"))
+	verbose, _ := strconv.ParseBool(firstEnv("GELATO_VERBOSE", "SOFT_SERVE_VERBOSE"))
 	return IsDebug() && verbose
 }
 
@@ -265,15 +323,21 @@ func parseEnv(cfg *Config) error {
 	// Merge initial admin keys from both config file and environment variables.
 	initialAdminKeys := append([]string{}, cfg.InitialAdminKeys...)
 
-	// Override with environment variables
+	// Preserve upstream Soft Serve variables as a compatibility layer, then let
+	// Gelato variables override them.
 	if err := env.ParseWithOptions(cfg, env.Options{
 		Prefix: "SOFT_SERVE_",
 	}); err != nil {
 		return fmt.Errorf("parse environment variables: %w", err)
 	}
+	if err := env.ParseWithOptions(cfg, env.Options{
+		Prefix: "GELATO_",
+	}); err != nil {
+		return fmt.Errorf("parse Gelato environment variables: %w", err)
+	}
 
 	// Merge initial admin keys from environment variables.
-	if initialAdminKeysEnv := os.Getenv("SOFT_SERVE_INITIAL_ADMIN_KEYS"); initialAdminKeysEnv != "" {
+	if initialAdminKeysEnv := firstEnv("GELATO_INITIAL_ADMIN_KEYS", "SOFT_SERVE_INITIAL_ADMIN_KEYS"); initialAdminKeysEnv != "" {
 		cfg.InitialAdminKeys = append(cfg.InitialAdminKeys, initialAdminKeys...)
 	}
 
@@ -310,10 +374,10 @@ func (c *Config) WriteConfig() error {
 }
 
 // DefaultDataPath returns the path to the data directory.
-// It uses the SOFT_SERVE_DATA_PATH environment variable if set, otherwise it
-// uses "data".
+// It uses GELATO_DATA_PATH or the compatible SOFT_SERVE_DATA_PATH environment
+// variable if set, otherwise it uses "data".
 func DefaultDataPath() string {
-	dp := os.Getenv("SOFT_SERVE_DATA_PATH")
+	dp := firstEnv("GELATO_DATA_PATH", "SOFT_SERVE_DATA_PATH")
 	if dp == "" {
 		dp = "data"
 	}
@@ -324,7 +388,7 @@ func DefaultDataPath() string {
 // ConfigPath returns the path to the config file.
 func (c *Config) ConfigPath() string { //nolint:revive
 	// If we have a custom config location set, then use that.
-	if path := os.Getenv("SOFT_SERVE_CONFIG_LOCATION"); exist(path) {
+	if path := firstEnv("GELATO_CONFIG_LOCATION", "SOFT_SERVE_CONFIG_LOCATION"); exist(path) {
 		return path
 	}
 
@@ -347,14 +411,14 @@ func (c *Config) Exist() bool {
 // Use Validate() to validate the config and ensure absolute paths.
 func DefaultConfig() *Config {
 	return &Config{
-		Name:     "Soft Serve",
+		Name:     "Gelato",
 		DataPath: DefaultDataPath(),
 		SSH: SSHConfig{
 			Enabled:       true,
 			ListenAddr:    ":23231",
 			PublicURL:     "ssh://localhost:23231",
-			KeyPath:       filepath.Join("ssh", "soft_serve_host_ed25519"),
-			ClientKeyPath: filepath.Join("ssh", "soft_serve_client_ed25519"),
+			KeyPath:       filepath.Join("ssh", "gelato_host_ed25519"),
+			ClientKeyPath: filepath.Join("ssh", "gelato_client_ed25519"),
 			MaxTimeout:    0,
 			IdleTimeout:   10 * 60, // 10 minutes
 		},
@@ -386,7 +450,7 @@ func DefaultConfig() *Config {
 		},
 		DB: DBConfig{
 			Driver: "sqlite",
-			DataSource: "soft-serve.db" +
+			DataSource: "gelato.db" +
 				"?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)",
 		},
 		LFS: LFSConfig{
@@ -395,6 +459,22 @@ func DefaultConfig() *Config {
 		},
 		Jobs: JobsConfig{
 			MirrorPull: "@every 10m",
+		},
+		OpenBao: OpenBaoConfig{
+			Enabled:        false,
+			PublicKeyURL:   "http://openbao:8200/v1/ssh/public_key",
+			PollInterval:   time.Minute,
+			RequestTimeout: 5 * time.Second,
+		},
+		NATS: NATSConfig{
+			Enabled:        false,
+			URL:            "nats://localhost:4222",
+			SubjectPrefix:  "gelato",
+			AdminQueue:     "gelato-admin",
+			RequestMaxSkew: 5 * time.Minute,
+		},
+		RemotePush: RemotePushConfig{
+			Enabled: false,
 		},
 	}
 }
@@ -477,4 +557,13 @@ func init() {
 	if ex, err := os.Executable(); err == nil {
 		binPath = filepath.ToSlash(ex)
 	}
+}
+
+func firstEnv(names ...string) string {
+	for _, name := range names {
+		if value := os.Getenv(name); value != "" {
+			return value
+		}
+	}
+	return ""
 }

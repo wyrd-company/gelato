@@ -26,7 +26,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment (please complete the following information):**
  - OS: [e.g. Linux]
  - Terminal [e.g. kitty, iterm2, gnome-terminal]
- - Version [e.g. v0.4.0]
+ - Version [e.g. 0.1.0]
 
 **Additional context**
 Add any other context about the problem here.

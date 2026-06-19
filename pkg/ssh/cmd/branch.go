@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	gitm "github.com/aymanbagabas/git-module"
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/webhook"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/webhook"
 )
 
 func branchCommand() *cobra.Command {

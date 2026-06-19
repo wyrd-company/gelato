@@ -8,12 +8,12 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/soft-serve/pkg/access"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
-	"github.com/charmbracelet/soft-serve/pkg/ui/components/code"
-	"github.com/charmbracelet/soft-serve/pkg/ui/components/selector"
-	"github.com/charmbracelet/soft-serve/pkg/ui/components/tabs"
+	"github.com/wyrd-company/gelato/pkg/access"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
+	"github.com/wyrd-company/gelato/pkg/ui/components/code"
+	"github.com/wyrd-company/gelato/pkg/ui/components/selector"
+	"github.com/wyrd-company/gelato/pkg/ui/components/tabs"
 )
 
 const (

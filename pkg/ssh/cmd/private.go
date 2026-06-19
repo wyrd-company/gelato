@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/soft-serve/pkg/backend"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
 )
 
 func privateCommand() *cobra.Command {

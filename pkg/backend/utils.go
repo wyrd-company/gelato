@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/proto"
 )
 
 // LatestFile returns the contents of the latest file at the specified path in

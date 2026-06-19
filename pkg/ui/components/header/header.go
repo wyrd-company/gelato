@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
 )
 
 // Header represents a header component.

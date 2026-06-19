@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/proto"
 )
 
 // createCommand is the command for creating a new repository.

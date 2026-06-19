@@ -10,8 +10,8 @@ import (
 
 	"charm.land/log/v2"
 	gitm "github.com/aymanbagabas/git-module"
-	"github.com/charmbracelet/soft-serve/git"
 	"github.com/go-git/go-git/v5/plumbing/format/pktline"
+	"github.com/wyrd-company/gelato/git"
 )
 
 // ErrNoBranches is returned when a repo has no branches.

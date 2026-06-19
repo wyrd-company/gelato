@@ -29,7 +29,7 @@ soft repo create empty '-d "empty repo"'
 # add collab
 soft repo collab add empty foo
 # add collab again
-# test issue #464 https://github.com/charmbracelet/soft-serve/issues/464
+# test issue #464 https://github.com/wyrd-company/gelato/issues/464
 ! soft repo collab add empty foo
 stderr '.*already exists.*'
 # a placeholder to reset stderr

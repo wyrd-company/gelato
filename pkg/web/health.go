@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"charm.land/log/v2"
-	"github.com/charmbracelet/soft-serve/pkg/db"
 	"github.com/gorilla/mux"
+	"github.com/wyrd-company/gelato/pkg/db"
 )
 
 // HealthController registers the health check routes for the web server.

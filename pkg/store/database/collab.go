@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/charmbracelet/soft-serve/pkg/access"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
-	"github.com/charmbracelet/soft-serve/pkg/store"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
+	"github.com/wyrd-company/gelato/pkg/access"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/models"
+	"github.com/wyrd-company/gelato/pkg/store"
+	"github.com/wyrd-company/gelato/pkg/utils"
 )
 
 type collabStore struct{}

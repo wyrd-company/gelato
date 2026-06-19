@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 
 	"charm.land/log/v2"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/store"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
-	"github.com/charmbracelet/soft-serve/pkg/webhook"
 	"github.com/google/uuid"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/models"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/store"
+	"github.com/wyrd-company/gelato/pkg/utils"
+	"github.com/wyrd-company/gelato/pkg/webhook"
 )
 
 // CreateWebhook creates a webhook for a repository.

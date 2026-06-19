@@ -3,12 +3,12 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
 )
 
 // treeCommand returns a command that list file or directory at path.

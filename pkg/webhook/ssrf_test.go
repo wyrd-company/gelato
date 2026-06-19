@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
-	"github.com/charmbracelet/soft-serve/pkg/ssrf"
+	"github.com/wyrd-company/gelato/pkg/db/models"
+	"github.com/wyrd-company/gelato/pkg/ssrf"
 )
 
 // TestSSRFProtection is an integration test verifying the webhook send path

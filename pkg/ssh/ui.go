@@ -7,14 +7,14 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
-	"github.com/charmbracelet/soft-serve/pkg/ui/components/footer"
-	"github.com/charmbracelet/soft-serve/pkg/ui/components/header"
-	"github.com/charmbracelet/soft-serve/pkg/ui/components/selector"
-	"github.com/charmbracelet/soft-serve/pkg/ui/pages/repo"
-	"github.com/charmbracelet/soft-serve/pkg/ui/pages/selection"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
+	"github.com/wyrd-company/gelato/pkg/ui/components/footer"
+	"github.com/wyrd-company/gelato/pkg/ui/components/header"
+	"github.com/wyrd-company/gelato/pkg/ui/components/selector"
+	"github.com/wyrd-company/gelato/pkg/ui/pages/repo"
+	"github.com/wyrd-company/gelato/pkg/ui/pages/selection"
 )
 
 type page int

@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/sshutils"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/sshutils"
 )
 
 // SetUsernameCommand returns a command that sets the user's username.

@@ -2,15 +2,21 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/hooks"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/sshutils"
-	"github.com/charmbracelet/soft-serve/pkg/webhook"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/certauth"
+	"github.com/wyrd-company/gelato/pkg/hooks"
+	"github.com/wyrd-company/gelato/pkg/messages"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/sshutils"
+	"github.com/wyrd-company/gelato/pkg/webhook"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 var _ hooks.Hooks = (*Backend)(nil)
@@ -44,10 +50,14 @@ func (d *Backend) Update(ctx context.Context, _ io.Writer, _ io.Writer, repo str
 			return
 		}
 
-		user, err = d.UserByPublicKey(ctx, pk)
-		if err != nil {
-			d.logger.Error("error finding user from public key", "key", pubkey, "err", err)
-			return
+		if cert, ok := pk.(*gossh.Certificate); ok {
+			user = certauth.NewIdentity(cert)
+		} else {
+			user, err = d.UserByPublicKey(ctx, pk)
+			if err != nil {
+				d.logger.Error("error finding user from public key", "key", pubkey, "err", err)
+				return
+			}
 		}
 	} else if username := os.Getenv("SOFT_SERVE_USERNAME"); username != "" {
 		var err error
@@ -77,12 +87,40 @@ func (d *Backend) Update(ctx context.Context, _ io.Writer, _ io.Writer, repo str
 		} else if err := webhook.SendEvent(ctx, wh); err != nil {
 			d.logger.Error("error sending branch_tag webhook", "err", err)
 		}
+		if git.IsZeroHash(arg.OldSha) && !git.IsZeroHash(arg.NewSha) {
+			switch {
+			case strings.HasPrefix(arg.RefName, git.RefsHeads):
+				d.publishRepositoryEvent(ctx, messages.RepositoryEvent{
+					Type:       messages.EventBranchCreated,
+					Repository: r.Name(),
+					Ref:        arg.RefName,
+					Branch:     strings.TrimPrefix(arg.RefName, git.RefsHeads),
+					OldSHA:     arg.OldSha,
+					NewSHA:     arg.NewSha,
+				})
+			case strings.HasPrefix(arg.RefName, git.RefsTags):
+				d.publishRepositoryEvent(ctx, messages.RepositoryEvent{
+					Type:       messages.EventRepositoryTagged,
+					Repository: r.Name(),
+					Ref:        arg.RefName,
+					Tag:        strings.TrimPrefix(arg.RefName, git.RefsTags),
+					OldSHA:     arg.OldSha,
+					NewSHA:     arg.NewSha,
+				})
+			}
+		}
 	}
 	wh, err := webhook.NewPushEvent(ctx, user, r, arg.RefName, arg.OldSha, arg.NewSha)
 	if err != nil {
 		d.logger.Error("error creating push webhook", "err", err)
 	} else if err := webhook.SendEvent(ctx, wh); err != nil {
 		d.logger.Error("error sending push webhook", "err", err)
+	}
+
+	if d.cfg.RemotePush.Enabled {
+		if err := d.pushUpdatedRef(ctx, r, arg); err != nil {
+			d.logger.Error("error pushing repository ref to remote", "repo", repo, "ref", arg.RefName, "err", err)
+		}
 	}
 }
 
@@ -131,4 +169,52 @@ func populateLastModified(ctx context.Context, d *Backend, name string) error {
 	}
 
 	return rr.writeLastModified(c)
+}
+
+func (d *Backend) pushUpdatedRef(ctx context.Context, repo proto.Repository, arg hooks.HookArg) error {
+	r, err := repo.Open()
+	if err != nil {
+		return err
+	}
+
+	remoteOutput, err := git.NewCommand("remote").WithContext(ctx).RunInDir(r.Path)
+	if err != nil {
+		return err
+	}
+	remotes := strings.Fields(string(remoteOutput))
+	if len(remotes) == 0 {
+		return nil
+	}
+	remote := remotes[0]
+
+	args := []string{"push"}
+	if repo.IsMirror() {
+		args = append(args, "--mirror", remote)
+	} else {
+		refspec := arg.RefName + ":" + arg.RefName
+		if git.IsZeroHash(arg.NewSha) {
+			refspec = ":" + arg.RefName
+		}
+		args = append(args, remote, refspec)
+	}
+
+	cmd := git.NewCommand(args...).WithContext(ctx)
+	cmd.AddEnvs(fmt.Sprintf(`GIT_SSH_COMMAND=ssh -o UserKnownHostsFile="%s" -o StrictHostKeyChecking=no -i "%s"`,
+		filepath.Join(d.cfg.DataPath, "ssh", "known_hosts"),
+		d.cfg.SSH.ClientKeyPath,
+	))
+	if _, err := cmd.RunInDir(r.Path); err != nil {
+		return err
+	}
+
+	d.publishRepositoryEvent(ctx, messages.RepositoryEvent{
+		Type:       messages.EventRepositoryRemotePushed,
+		Repository: repo.Name(),
+		Ref:        arg.RefName,
+		OldSHA:     arg.OldSha,
+		NewSHA:     arg.NewSha,
+		Remote:     remote,
+		Mirror:     repo.IsMirror(),
+	})
+	return nil
 }

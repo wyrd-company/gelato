@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/charmbracelet/soft-serve/pkg/backend"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
 )
 
 func renameCommand() *cobra.Command {

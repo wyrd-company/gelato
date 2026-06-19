@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/soft-serve/pkg/access"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
-	"github.com/charmbracelet/soft-serve/pkg/proto"
-	"github.com/charmbracelet/soft-serve/pkg/sshutils"
-	"github.com/charmbracelet/soft-serve/pkg/utils"
+	"github.com/wyrd-company/gelato/pkg/access"
+	"github.com/wyrd-company/gelato/pkg/certauth"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/models"
+	"github.com/wyrd-company/gelato/pkg/proto"
+	"github.com/wyrd-company/gelato/pkg/sshutils"
+	"github.com/wyrd-company/gelato/pkg/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -27,6 +28,12 @@ func (d *Backend) AccessLevel(ctx context.Context, repo string, username string)
 //
 // It implements backend.Backend.
 func (d *Backend) AccessLevelByPublicKey(ctx context.Context, repo string, pk ssh.PublicKey) access.AccessLevel {
+	if user := proto.UserFromContext(ctx); user != nil {
+		if level, ok := certauth.AccessLevelForUser(user, repo); ok {
+			return level
+		}
+	}
+
 	for _, k := range d.cfg.AdminKeys() {
 		if sshutils.KeysEqual(pk, k) {
 			return access.AdminAccess
@@ -48,6 +55,10 @@ func (d *Backend) AccessLevelForUser(ctx context.Context, repo string, user prot
 	anon := d.AnonAccess(ctx)
 	if user != nil {
 		username = user.Username()
+	}
+
+	if level, ok := certauth.AccessLevelForUser(user, repo); ok {
+		return level
 	}
 
 	// If the user is an admin, they have admin access.

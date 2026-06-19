@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"charm.land/log/v2"
-	"github.com/charmbracelet/soft-serve/pkg/config"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/wyrd-company/gelato/pkg/config"
 )
 
 // NewRouter returns a new HTTP router.

@@ -3,9 +3,9 @@ package store
 import (
 	"context"
 
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/models"
 	"github.com/google/uuid"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/models"
 )
 
 // WebhookStore is an interface for managing webhooks.

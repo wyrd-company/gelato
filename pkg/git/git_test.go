@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/charmbracelet/soft-serve/git"
+	"github.com/wyrd-company/gelato/git"
 )
 
 func TestPktline(t *testing.T) {

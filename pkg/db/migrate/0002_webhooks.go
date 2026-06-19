@@ -3,7 +3,7 @@ package migrate
 import (
 	"context"
 
-	"github.com/charmbracelet/soft-serve/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db"
 )
 
 const (

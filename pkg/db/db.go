@@ -7,13 +7,13 @@ import (
 	"fmt"
 
 	"charm.land/log/v2"
-	"github.com/charmbracelet/soft-serve/pkg/config"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"  // postgres driver
+	_ "github.com/lib/pq" // postgres driver
+	"github.com/wyrd-company/gelato/pkg/config"
 	_ "modernc.org/sqlite" // sqlite driver
 )
 
-// DB is the interface for a Soft Serve database.
+// DB is the interface for a Gelato database.
 type DB struct {
 	*sqlx.DB
 	logger *log.Logger

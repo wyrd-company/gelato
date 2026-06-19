@@ -9,17 +9,17 @@ import (
 
 	"charm.land/log/v2"
 	"github.com/charmbracelet/colorprofile"
-	"github.com/charmbracelet/soft-serve/cmd/soft/admin"
-	"github.com/charmbracelet/soft-serve/cmd/soft/browse"
-	"github.com/charmbracelet/soft-serve/cmd/soft/hook"
-	"github.com/charmbracelet/soft-serve/cmd/soft/serve"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	logr "github.com/charmbracelet/soft-serve/pkg/log"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
-	"github.com/charmbracelet/soft-serve/pkg/version"
 	mcobra "github.com/muesli/mango-cobra"
 	"github.com/muesli/roff"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/cmd/soft/admin"
+	"github.com/wyrd-company/gelato/cmd/soft/browse"
+	"github.com/wyrd-company/gelato/cmd/soft/hook"
+	"github.com/wyrd-company/gelato/cmd/soft/serve"
+	"github.com/wyrd-company/gelato/pkg/config"
+	logr "github.com/wyrd-company/gelato/pkg/log"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
+	"github.com/wyrd-company/gelato/pkg/version"
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
@@ -37,9 +37,9 @@ var (
 	CommitDate = ""
 
 	rootCmd = &cobra.Command{
-		Use:          "soft",
+		Use:          "gelato",
 		Short:        "A self-hostable Git server for the command line",
-		Long:         "Soft Serve is a self-hostable Git server for the command line.",
+		Long:         "Gelato is a certificate-authenticated Git server with a NATS admin interface.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return browse.Command.RunE(cmd, args)
@@ -66,7 +66,7 @@ var (
 )
 
 func init() {
-	if noColor, _ := strconv.ParseBool(os.Getenv("SOFT_SERVE_NO_COLOR")); noColor {
+	if noColor, _ := strconv.ParseBool(firstEnv("GELATO_NO_COLOR", "SOFT_SERVE_NO_COLOR")); noColor {
 		common.DefaultColorProfile = colorprofile.NoTTY
 	}
 
@@ -95,6 +95,15 @@ func init() {
 	version.Version = Version
 	version.CommitSHA = CommitSHA
 	version.CommitDate = CommitDate
+}
+
+func firstEnv(names ...string) string {
+	for _, name := range names {
+		if value := os.Getenv(name); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func main() {
@@ -130,7 +139,7 @@ func main() {
 	}
 
 	// Set the max number of processes to the number of CPUs
-	// This is useful when running soft serve in a container
+	// This is useful when running Gelato in a container.
 	if _, err := maxprocs.Set(opts...); err != nil {
 		log.Warn("couldn't set automaxprocs", "error", err)
 	}

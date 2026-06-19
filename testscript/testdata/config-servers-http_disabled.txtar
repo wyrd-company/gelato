@@ -16,4 +16,3 @@ ensureserverrunning STATS_PORT
 
 # ensure that the disabled server is not running
 ensureservernotrunning HTTP_PORT
-

@@ -3,6 +3,7 @@ cmd/soft/soft
 .ssh
 .repos
 dist
+node_modules/
 data/
 completions/
 manpages/

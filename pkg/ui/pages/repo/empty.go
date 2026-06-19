@@ -3,8 +3,8 @@ package repo
 import (
 	"fmt"
 
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/ui/common"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/ui/common"
 )
 
 func defaultEmptyRepoMsg(cfg *config.Config, repo string) string {

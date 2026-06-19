@@ -7,13 +7,14 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/hooks"
-	"github.com/charmbracelet/soft-serve/pkg/store"
-	"github.com/charmbracelet/soft-serve/pkg/store/database"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/events"
+	"github.com/wyrd-company/gelato/pkg/hooks"
+	"github.com/wyrd-company/gelato/pkg/store"
+	"github.com/wyrd-company/gelato/pkg/store/database"
 )
 
 // InitBackendContext initializes the backend context.
@@ -35,6 +36,11 @@ func InitBackendContext(cmd *cobra.Command, _ []string) error {
 	ctx = store.WithContext(ctx, dbstore)
 	be := backend.New(ctx, cfg, dbx, dbstore)
 	ctx = backend.WithContext(ctx, be)
+	publisher, err := events.NewNATSPublisher(cfg)
+	if err != nil {
+		return err
+	}
+	ctx = events.WithPublisher(ctx, publisher)
 
 	cmd.SetContext(ctx)
 
@@ -49,6 +55,9 @@ func CloseDBContext(cmd *cobra.Command, _ []string) error {
 		if err := dbx.Close(); err != nil {
 			return fmt.Errorf("close database: %w", err)
 		}
+	}
+	if err := events.FromContext(ctx).Close(); err != nil {
+		return fmt.Errorf("close event publisher: %w", err)
 	}
 
 	return nil

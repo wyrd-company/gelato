@@ -3,12 +3,12 @@ package admin
 import (
 	"fmt"
 
-	"github.com/charmbracelet/soft-serve/cmd"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/migrate"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/cmd"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/migrate"
 )
 
 var (

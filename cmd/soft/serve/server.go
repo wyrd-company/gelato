@@ -9,25 +9,27 @@ import (
 
 	"charm.land/log/v2"
 
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/cron"
-	"github.com/charmbracelet/soft-serve/pkg/daemon"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/jobs"
-	sshsrv "github.com/charmbracelet/soft-serve/pkg/ssh"
-	"github.com/charmbracelet/soft-serve/pkg/stats"
-	"github.com/charmbracelet/soft-serve/pkg/web"
 	"github.com/charmbracelet/ssh"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/cron"
+	"github.com/wyrd-company/gelato/pkg/daemon"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/jobs"
+	"github.com/wyrd-company/gelato/pkg/natsadmin"
+	sshsrv "github.com/wyrd-company/gelato/pkg/ssh"
+	"github.com/wyrd-company/gelato/pkg/stats"
+	"github.com/wyrd-company/gelato/pkg/web"
 	"golang.org/x/sync/errgroup"
 )
 
-// Server is the Soft Serve server.
+// Server is the Gelato server.
 type Server struct {
 	SSHServer   *sshsrv.SSHServer
 	GitDaemon   *daemon.GitDaemon
 	HTTPServer  *web.HTTPServer
 	StatsServer *stats.StatsServer
+	NATSServer  *natsadmin.Server
 	CertLoader  *CertReloader
 	Cron        *cron.Scheduler
 	Config      *config.Config
@@ -38,7 +40,7 @@ type Server struct {
 	ctx    context.Context
 }
 
-// NewServer returns a new *Server configured to serve Soft Serve. The SSH
+// NewServer returns a new *Server configured to serve Gelato. The SSH
 // server key-pair will be created if none exists.
 // It expects a context with *backend.Backend, *db.DB, *log.Logger, and
 // *config.Config attached.
@@ -87,6 +89,11 @@ func NewServer(ctx context.Context) (*Server, error) {
 	srv.StatsServer, err = stats.NewStatsServer(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create stats server: %w", err)
+	}
+
+	srv.NATSServer, err = natsadmin.New(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create nats admin server: %w", err)
 	}
 
 	if cfg.HTTP.TLSKeyPath != "" && cfg.HTTP.TLSCertPath != "" {
@@ -159,6 +166,13 @@ func (s *Server) Start() error {
 		})
 	}
 
+	if s.Config.NATS.Enabled && s.NATSServer != nil {
+		errg.Go(func() error {
+			s.logger.Print("Starting NATS admin server", "url", s.Config.NATS.URL, "subject", s.Config.NATS.SubjectPrefix+".admin.repo.*")
+			return s.NATSServer.Start()
+		})
+	}
+
 	errg.Go(func() error {
 		s.Cron.Start()
 		return nil
@@ -181,6 +195,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	errg.Go(func() error {
 		return s.StatsServer.Shutdown(ctx)
 	})
+	if s.NATSServer != nil {
+		errg.Go(func() error {
+			return s.NATSServer.Close()
+		})
+	}
 	errg.Go(func() error {
 		for _, j := range jobs.List() {
 			s.Cron.Remove(j.ID)
@@ -199,6 +218,9 @@ func (s *Server) Close() error {
 	errg.Go(s.HTTPServer.Close)
 	errg.Go(s.SSHServer.Close)
 	errg.Go(s.StatsServer.Close)
+	if s.NATSServer != nil {
+		errg.Go(s.NATSServer.Close)
+	}
 	errg.Go(func() error {
 		s.Cron.Stop()
 		return nil

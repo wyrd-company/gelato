@@ -13,13 +13,15 @@ import (
 	bm "charm.land/wish/v2/bubbletea"
 	rm "charm.land/wish/v2/recover"
 	"github.com/charmbracelet/keygen"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/store"
 	"github.com/charmbracelet/ssh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/certauth"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/events"
+	"github.com/wyrd-company/gelato/pkg/store"
 	gossh "golang.org/x/crypto/ssh"
 )
 
@@ -55,6 +57,8 @@ func NewSSHServer(ctx context.Context) (*SSHServer, error) {
 	dbx := db.FromContext(ctx)
 	datastore := store.FromContext(ctx)
 	be := backend.FromContext(ctx)
+	cache := certauth.AuthorityCacheFromContext(ctx)
+	publisher := events.FromContext(ctx)
 
 	var err error
 	s := &SSHServer{
@@ -80,7 +84,7 @@ func NewSSHServer(ctx context.Context) (*SSHServer, error) {
 			AuthenticationMiddleware,
 			// Context middleware.
 			// This must come first to set up the context.
-			ContextMiddleware(cfg, dbx, datastore, be, logger),
+			ContextMiddleware(cfg, dbx, datastore, be, logger, WithAuthorityCache(cache), WithEventPublisher(publisher)),
 		),
 	}
 
@@ -165,6 +169,23 @@ func (s *SSHServer) PublicKeyHandler(ctx ssh.Context, pk ssh.PublicKey) (allowed
 		return false
 	}
 
+	if s.cfg.OpenBao.Enabled {
+		cache := certauth.AuthorityCacheFromContext(s.ctx)
+		identity, err := cache.VerifyPublicKey(pk)
+		if err != nil {
+			s.logger.Warn("rejected SSH certificate", "err", err)
+			return false
+		}
+
+		initializePermissions(ctx)
+		perms := ctx.Permissions()
+		perms.Extensions["pubkey-fp"] = gossh.FingerprintSHA256(pk)
+		perms.Extensions["gelato-username"] = identity.Username()
+		perms.Extensions["gelato-principals"] = certauth.PrincipalSummary(identity.Principals())
+		ctx.SetValue(ssh.ContextKeyPermissions, perms)
+		return true
+	}
+
 	allowed = true
 
 	// XXX: store the first "approved" public-key fingerprint in the
@@ -182,6 +203,11 @@ func (s *SSHServer) PublicKeyHandler(ctx ssh.Context, pk ssh.PublicKey) (allowed
 // KeyboardInteractiveHandler handles keyboard interactive authentication.
 // This is used after all public key authentication has failed.
 func (s *SSHServer) KeyboardInteractiveHandler(ctx ssh.Context, _ gossh.KeyboardInteractiveChallenge) bool {
+	if s.cfg.OpenBao.Enabled {
+		keyboardInteractiveCounter.WithLabelValues(strconv.FormatBool(false)).Inc()
+		return false
+	}
+
 	ac := s.be.AllowKeyless(ctx)
 	keyboardInteractiveCounter.WithLabelValues(strconv.FormatBool(ac)).Inc()
 

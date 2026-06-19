@@ -8,13 +8,15 @@ import (
 	"strings"
 
 	"charm.land/log/v2"
-	"github.com/charmbracelet/soft-serve/git"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/lfs"
-	"github.com/charmbracelet/soft-serve/pkg/store"
-	"github.com/charmbracelet/soft-serve/pkg/sync"
+	"github.com/wyrd-company/gelato/git"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/events"
+	"github.com/wyrd-company/gelato/pkg/lfs"
+	"github.com/wyrd-company/gelato/pkg/messages"
+	"github.com/wyrd-company/gelato/pkg/store"
+	"github.com/wyrd-company/gelato/pkg/sync"
 )
 
 func init() {
@@ -69,6 +71,7 @@ func (m mirrorPull) Func(ctx context.Context) func() {
 						"remote update --prune", // update remote and prune remote refs
 					}
 
+					var updateErr error
 					for _, c := range cmds {
 						args := strings.Split(c, " ")
 						cmd := git.NewCommand(args...).WithContext(ctx)
@@ -81,6 +84,23 @@ func (m mirrorPull) Func(ctx context.Context) func() {
 
 						if _, err := cmd.RunInDir(r.Path); err != nil {
 							logger.Error("error running git remote update", "repo", name, "err", err)
+							updateErr = err
+						}
+					}
+					if updateErr == nil {
+						remote := "origin"
+						if out, err := git.NewCommand("remote").WithContext(ctx).RunInDir(r.Path); err == nil {
+							if remotes := strings.Fields(string(out)); len(remotes) > 0 {
+								remote = remotes[0]
+							}
+						}
+						if err := events.PublishRepositoryEvent(ctx, messages.RepositoryEvent{
+							Type:       messages.EventRepositoryRemotePulled,
+							Repository: repo.Name(),
+							Remote:     remote,
+							Mirror:     repo.IsMirror(),
+						}); err != nil {
+							logger.Error("failed to publish mirror pull event", "repo", name, "err", err)
 						}
 					}
 

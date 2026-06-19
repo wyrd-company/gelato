@@ -13,11 +13,11 @@ import (
 	"strings"
 
 	"charm.land/log/v2"
-	"github.com/charmbracelet/soft-serve/cmd"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/hooks"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/cmd"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/hooks"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 	Command = &cobra.Command{
 		Use:    "hook",
 		Short:  "Run git server hooks",
-		Long:   "Handles Soft Serve git server hooks.",
+		Long:   "Handles Gelato git server hooks.",
 		Hidden: true,
 		PersistentPreRunE: func(c *cobra.Command, args []string) error {
 			logger := log.FromContext(c.Context())

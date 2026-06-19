@@ -12,12 +12,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/soft-serve/cmd"
-	"github.com/charmbracelet/soft-serve/pkg/backend"
-	"github.com/charmbracelet/soft-serve/pkg/config"
-	"github.com/charmbracelet/soft-serve/pkg/db"
-	"github.com/charmbracelet/soft-serve/pkg/db/migrate"
+	"charm.land/log/v2"
 	"github.com/spf13/cobra"
+	"github.com/wyrd-company/gelato/cmd"
+	"github.com/wyrd-company/gelato/pkg/backend"
+	"github.com/wyrd-company/gelato/pkg/certauth"
+	"github.com/wyrd-company/gelato/pkg/config"
+	"github.com/wyrd-company/gelato/pkg/db"
+	"github.com/wyrd-company/gelato/pkg/db/migrate"
 )
 
 var (
@@ -68,6 +70,18 @@ var (
 			db := db.FromContext(ctx)
 			if err := migrate.Migrate(ctx, db); err != nil {
 				return fmt.Errorf("migration error: %w", err)
+			}
+
+			if cfg.OpenBao.Enabled {
+				cache := certauth.NewAuthorityCache(cfg.OpenBao)
+				if err := cache.Refresh(ctx); err != nil {
+					return fmt.Errorf("refresh OpenBao SSH CA public keys: %w", err)
+				}
+				cache.Start(ctx, func(err error) {
+					log.FromContext(ctx).WithPrefix("openbao").Error("failed to refresh SSH CA public keys", "err", err)
+				})
+				ctx = certauth.WithAuthorityCache(ctx, cache)
+				c.SetContext(ctx)
 			}
 
 			s, err := NewServer(ctx)
@@ -174,7 +188,7 @@ else
         newrev_type=$(git cat-file -t $newrev)
 fi
 
-echo "Hi from Soft Serve update hook!"
+echo "Hi from Gelato update hook!"
 echo
 echo "Repository: $SOFT_SERVE_REPO_NAME"
 echo "RefName: $refname"
