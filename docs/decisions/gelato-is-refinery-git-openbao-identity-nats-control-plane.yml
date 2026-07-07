@@ -1,0 +1,87 @@
+$schema: https://refinery.systems/ontology/decision-record
+name: Gelato is Refinery's named git service, identified by OpenBao and controlled over NATS
+
+relationships:
+  contextualizes:
+    - task-refs-are-branches-in-a-per-practice-gelato-task-repo
+
+description: >-
+  refinery-worker's task-ref parsing already defaulted its allowed ssh host to
+  `gelato`, and refinery-operations' dispatcher needs a real address to push
+  task capsule refs to once it stops writing to a local test path instead of
+  a live git host. Both depended on a question nothing had settled on the
+  record: is "Gelato" a specific, named git service that Refinery core may
+  assume and depend on directly, or is `gelato` a placeholder value standing
+  in for whatever ssh-reachable git host an organization happens to point at?
+  This repository (a Soft Serve fork) already implements OpenBao-signed SSH
+  certificate authentication and a NATS admin/event integration — including a
+  `RepoBranchRequest` create operation — but those arrived as a Codex-authored
+  feature PR, not as a recorded architectural commitment. Bob's ruling
+  resolves the question: Gelato is refinery-git, Refinery's own purpose-built
+  git service, not an arbitrary backend Refinery core stays agnostic about.
+
+considered-options:
+  1: >-
+    Treat `gelato` as a placeholder for an abstract, swappable git backend.
+    Refinery core (the worker's default allowed ssh host, the dispatcher's
+    branch-provisioning code) would treat any ssh-reachable git host as
+    valid, with this repository being merely today's example deployment.
+    Structural mutations such as branch creation would then need either a
+    protocol every candidate git host must implement, or a per-host adapter
+    layer Refinery core carries on their behalf.
+  2: >-
+    Name Gelato as Refinery's own git service ("refinery-git") and let core
+    code address it directly. Gelato is not an arbitrary git host Refinery
+    happens to point at — it is a Soft Serve fork built specifically to
+    Refinery's needs, adding OpenBao-signed SSH certificate authentication
+    (identity flows from the same OpenBao trust root Refinery already uses)
+    and a NATS admin control-plane (typed, idempotent operations such as
+    repository/branch provisioning, plus operation events) alongside its
+    ordinary git-over-ssh data plane. Core code can rely on these
+    Gelato-specific capabilities directly instead of behind a generic
+    interface.
+
+decision-outcome:
+  chosen-option: 2
+  justification: >-
+    Confirms the worker's already-shipped default allowed-host `gelato` was
+    correct, not a placeholder guess, which unblocks the dispatcher-side
+    follow-up work of materializing and pushing task capsule refs to a real
+    address instead of a local test path. Committing to a named, purpose-built
+    service means Refinery core can depend on capabilities a generic "any ssh
+    git host" abstraction would not guarantee — NATS admin operations like
+    repository/branch creation, and OpenBao-issued ssh certificates as the one
+    identity token — without first building and maintaining an adapter layer
+    that, in practice, only Gelato would ever satisfy. It also fixes a clean
+    separation at the protocol level: ordinary git-over-ssh remains the data
+    plane for cloning, fetching, and pushing content (including by the Worker,
+    authenticated with an OpenBao-signed certificate), while control-plane
+    mutations that create or manage repository structure — such as
+    provisioning a branch — go through Gelato's NATS admin channel as typed,
+    idempotent requests, never through Refinery's read-only graph/GraphQL
+    layer, which stays a discovery-only surface.
+
+expected-outcomes:
+  positive:
+    - >-
+      Refinery core no longer hedges about whether `gelato` is a placeholder;
+      worker and dispatcher code can name and depend on Gelato directly.
+    - >-
+      Mutation (repository/branch provisioning) and data (git content) get a
+      settled, separate transport: NATS admin operations for the former, git
+      over ssh for the latter, with OpenBao-signed certificates as the one
+      identity token both planes trust.
+    - >-
+      Unblocks the dispatcher-side follow-up of pushing task capsule refs to
+      a real Gelato address over ssh instead of a local test-only path.
+  negative:
+    - >-
+      Refinery core becomes coupled to a specific, self-hosted git service
+      rather than an interchangeable "any git host" abstraction; adopting a
+      different git backend later means rebuilding the OpenBao identity and
+      NATS admin integrations Gelato already provides.
+    - >-
+      The NATS admin control-plane and the git data-plane are two separate
+      subsystems that must be kept consistent with each other (for example, a
+      branch created over NATS but never pushed to, or content pushed to a
+      branch NATS never provisioned) rather than one unified interface.
