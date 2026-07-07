@@ -1,6 +1,6 @@
 # Gelato
 
-Gelato is a self-hosted Git server forked from Charm Bracelet Soft Serve. It keeps Soft Serve's Git-over-SSH, Git daemon, HTTP, LFS, repository browsing, mirroring, and hook behavior, and adds:
+Gelato is a self-hosted Git server forked from [Charm_](https://charm.sh/) [Soft Serve](https://github.com/charmbracelet/soft-serve). It keeps Soft Serve's Git-over-SSH, Git daemon, HTTP, LFS, repository browsing, mirroring, and hook behavior, and adds:
 
 - OpenBao-signed SSH certificate authentication
 - principal-driven authorization
@@ -266,3 +266,11 @@ The CD workflow publishes:
 - container image `ghcr.io/wyrd-company/gelato:<version>`
 - `@wyrd-company/gelato-messages` to npmjs
 - `@wyrd-company/gelato-messages` to GitHub Packages
+
+## A Love Letter
+
+While this project solves our own needs for Git server hosting, it is a labor of love that deeply appreciates the work it is based off:
+
+- [Charm_ Soft Serve](https://github.com/charmbracelet/soft-serve)
+- [OpenBao](https://openbao.org)
+- [NATS.io](https://nats.io)
