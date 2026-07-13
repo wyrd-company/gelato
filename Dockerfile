@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS build
+FROM golang:1.26-alpine AS build
 
 RUN apk add --no-cache git
 WORKDIR /src
@@ -9,7 +9,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/gelato ./cmd/soft
 
-FROM alpine:3.22
+FROM alpine:3.24
 
 RUN apk add --no-cache bash git openssh
 
