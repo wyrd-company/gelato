@@ -40,6 +40,8 @@ github.com/charmbracelet/colorprofile v0.4.3 h1:QPa1IWkYI+AOB+fE+mg/5/4HRMZcaXex
 github.com/charmbracelet/colorprofile v0.4.3/go.mod h1:/zT4BhpD5aGFpqQQqw7a+VtHCzu+zrQtt1zhMt9mR4Q=
 github.com/charmbracelet/git-lfs-transfer v0.1.1-0.20240708204110-bacbfdb68d92 h1:KtQlsiHfY3K4AoIEh0yUE/wCLHteZ9EzV1hKmx+p7U8=
 github.com/charmbracelet/git-lfs-transfer v0.1.1-0.20240708204110-bacbfdb68d92/go.mod h1:UrXUCm3xLQkq15fu7qlXHUMlrhdlXHoi13KH2Dfiits=
+github.com/charmbracelet/git-lfs-transfer v0.1.1-0.20260812203852-971c0284dc33 h1:YG5mXlv9SxS4rdtSxK3RuH146x1HIQzsbVJqSp/Rvfc=
+github.com/charmbracelet/git-lfs-transfer v0.1.1-0.20260812203852-971c0284dc33/go.mod h1:R+SetERD4+IL7QH0WHp9MLifvITvh9gL3g8vX1j2Fcs=
 github.com/charmbracelet/keygen v0.5.4 h1:XQYgf6UEaTGgQSSmiPpIQ78WfseNQp4Pz8N/c1OsrdA=
 github.com/charmbracelet/keygen v0.5.4/go.mod h1:t4oBRr41bvK7FaJsAaAQhhkUuHslzFXVjOBwA55CZNM=
 github.com/charmbracelet/ssh v0.0.0-20250826160808-ebfa259c7309 h1:dCVbCRRtg9+tsfiTXTp0WupDlHruAXyp+YoxGVofHHc=
