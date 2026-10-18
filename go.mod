@@ -11,7 +11,7 @@ require (
 	charm.land/wish/v2 v2.0.1
 	github.com/alecthomas/chroma/v2 v2.24.1
 	github.com/aymanbagabas/git-module v1.8.4-0.20250826192401-1f81c5471e53
-	github.com/caarlos0/duration v0.0.0-20240108180406-5d492514f3c7
+	github.com/caarlos0/duration v0.0.0-20241219124531-2bb7dc683aa4
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/charmbracelet/git-lfs-transfer v0.1.1-0.20240708204110-bacbfdb68d92
@@ -35,11 +35,13 @@ require (
 	github.com/muesli/mango-cobra v1.3.0
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/roff v0.1.0
+	github.com/nats-io/nats.go v1.52.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/sergi/go-diff v1.4.0
 	github.com/spf13/cobra v1.10.2
+	github.com/vmihailenco/msgpack/v5 v5.4.1
 	go.uber.org/automaxprocs v1.6.0
 	golang.org/x/crypto v0.50.0
 	golang.org/x/sync v0.20.0
@@ -80,7 +82,6 @@ require (
 	github.com/muesli/mango v0.2.0 // indirect
 	github.com/muesli/mango-pflag v0.1.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/nats-io/nats.go v1.52.0 // indirect
 	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
@@ -91,7 +92,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
-	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
